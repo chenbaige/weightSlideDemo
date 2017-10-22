@@ -27,8 +27,8 @@
       <file leaf-file-name="SlideMeasureView.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/app/src/main/java/com/hbandroid/viewdemo/view/SlideMeasureView.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.875">
-              <caret line="234" column="42" selection-start-line="234" selection-start-column="42" selection-end-line="234" selection-end-column="42" />
+            <state vertical-scroll-proportion="0.25">
+              <caret line="216" column="59" selection-start-line="216" selection-start-column="59" selection-end-line="216" selection-end-column="59" />
               <folding />
             </state>
           </provider>
@@ -2180,8 +2180,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/app/src/main/java/com/hbandroid/viewdemo/view/SlideMeasureView.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.875">
-          <caret line="234" column="42" selection-start-line="234" selection-start-column="42" selection-end-line="234" selection-end-column="42" />
+        <state vertical-scroll-proportion="0.25">
+          <caret line="216" column="59" selection-start-line="216" selection-start-column="59" selection-end-line="216" selection-end-column="59" />
           <folding />
         </state>
       </provider>

@@ -5,10 +5,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
-import android.support.v4.widget.ViewDragHelper;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
-import android.view.VelocityTracker;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Scroller;
@@ -82,12 +80,15 @@ public class SlideMeasureView extends View {
     private Rect mCurrValueBound;
 
     private Scroller mScroller;
-    private ViewDragHelper mViewDragHelper;
-    private VelocityTracker mVelocityTracker;
 
     //记录上一次滑动结束的位置
     private int mLastX;
-    private int mMove;
+
+
+    //刻度尺总刻度值
+    private int mCountScale;
+    //当前指针指向的刻度值
+    private int mTempScale;
 
     public SlideMeasureView(Context context) {
         this(context, null);
@@ -143,16 +144,8 @@ public class SlideMeasureView extends View {
         mCurrValueBound = new Rect();
 
         mScroller = new Scroller(mContext);
-//        mViewDragHelper = ViewDragHelper.create((ViewGroup) this.getParent(), mCallback);
+        mCountScale = (mEndValue - mStartValue) * mYardstick;
     }
-
-//    public ViewDragHelper.Callback mCallback = new ViewDragHelper.Callback() {
-//        @Override
-//        public boolean tryCaptureView(View child, int pointerId) {
-//            return false;
-//        }
-//    };
-
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
@@ -161,6 +154,8 @@ public class SlideMeasureView extends View {
         int width = (mEndValue - mStartValue) * mYardstick * mIntervalWidth;
         int height = DEFALUT_DIVIDER_LINE_TO_CURR_VALUE * 2 + mCurrValueFontMetrics.bottom - mCurrValueFontMetrics.top + DEFALUT_LONG_LINE_HEIGHT + mValueFontMetrics.bottom - mValueFontMetrics.top + DEFALUT_DIVIDER_LINE_TO_VALUE * 2;
         setMeasuredDimension(width, height);
+
+        mTempScale = getMeasuredWidth() / mYardstick / 2 + mStartValue;
     }
 
     @Override
@@ -219,21 +214,21 @@ public class SlideMeasureView extends View {
                 return true;
             case MotionEvent.ACTION_MOVE:
                 int dataX = mLastX - x;
-//                if (mCountScale - mTempScale < 0) { //向右边滑动
-//                    if (mCountScale <= mStartValue && dataX <= 0) //禁止继续向右滑动
-//                        return super.onTouchEvent(event);
-//                } else if (mCountScale - mTempScale > 0) { //向左边滑动
-//                    if (mCountScale >= mMax && dataX >= 0) //禁止继续向左滑动
-//                        return super.onTouchEvent(event);
-//                }
+                if (mCountScale - mTempScale < 0) { //向右边滑动
+                    if (mCountScale <= mStartValue && dataX <= 0) //禁止继续向右滑动
+                        return super.onTouchEvent(event);
+                } else if (mCountScale - mTempScale > 0) { //向左边滑动
+                    if (mCountScale >= mEndValue && dataX >= 0) //禁止继续向左滑动
+                        return super.onTouchEvent(event);
+                }
                 smoothScrollBy(dataX, 0);
                 mLastX = x;
                 postInvalidate();
-//                mTempScale = mCountScale;
+                mTempScale = mCountScale;
                 return true;
             case MotionEvent.ACTION_UP:
-//                if (mCountScale < mMin) mCountScale = mMin;
-//                if (mCountScale > mMax) mCountScale = mMax;
+                if (mCountScale < mStartValue) mCountScale = mStartValue;
+                if (mCountScale > mEndValue) mCountScale = mEndValue;
 //                int finalX = (mCountScale - mMidCountScale) * mScaleMargin;
                 int finalX = getScreenWidth() / 2 + getScrollX();
                 mScroller.setFinalX(finalX); //纠正指针位置
