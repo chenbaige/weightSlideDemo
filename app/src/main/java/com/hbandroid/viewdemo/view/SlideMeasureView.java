@@ -5,8 +5,10 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.support.v4.widget.ViewDragHelper;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Scroller;
@@ -16,11 +18,11 @@ import java.math.RoundingMode;
 
 /**
  * Title: LevelProgressDemo
- * <p>
+ * <p/>
  * Description:薄荷健康的滑动卷尺效果 效果：https://user-gold-cdn.xitu.io/2017/10/13/b9b39e52d632a350baa7c1adbb14cd12
- * <p>
+ * <p/>
  * Author:baigege (baigegechen@gmail.com)
- * <p>
+ * <p/>
  * Date:2017-10-22
  */
 public class SlideMeasureView extends View {
@@ -80,10 +82,12 @@ public class SlideMeasureView extends View {
     private Rect mCurrValueBound;
 
     private Scroller mScroller;
+    private ViewDragHelper mViewDragHelper;
+    private VelocityTracker mVelocityTracker;
 
     //记录上一次滑动结束的位置
     private int mLastX;
-    private int mLastY;
+    private int mMove;
 
     public SlideMeasureView(Context context) {
         this(context, null);
@@ -139,7 +143,15 @@ public class SlideMeasureView extends View {
         mCurrValueBound = new Rect();
 
         mScroller = new Scroller(mContext);
+//        mViewDragHelper = ViewDragHelper.create((ViewGroup) this.getParent(), mCallback);
     }
+
+//    public ViewDragHelper.Callback mCallback = new ViewDragHelper.Callback() {
+//        @Override
+//        public boolean tryCaptureView(View child, int pointerId) {
+//            return false;
+//        }
+//    };
 
 
     @Override
@@ -154,7 +166,6 @@ public class SlideMeasureView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-
 
         //刻度线开始时的y坐标
         int startLineLocationY = DEFALUT_DIVIDER_LINE_TO_CURR_VALUE * 2 + mCurrValueFontMetrics.bottom - mCurrValueFontMetrics.top;
@@ -189,46 +200,47 @@ public class SlideMeasureView extends View {
         double floCurrValue = bili * (mEndValue - mStartValue) + mStartValue;
         String strCurrValue = format1(floCurrValue);
         mCurrValuePaint.getTextBounds(strCurrValue, 0, strCurrValue.length(), mCurrValueBound);
-        canvas.drawText(strCurrValue, (getScreenWidth() - (mCurrValueBound.right - mCurrValueBound.left)) / 2 + getScrollX(), DEFALUT_DIVIDER_LINE_TO_CURR_VALUE - mCurrValueFontMetrics.top, mCurrValuePaint);
+        canvas.drawText(strCurrValue, (getScreenWidth() - (mCurrValueBound.right - mCurrValueBound.left)) / 2 + mScroller.getFinalX(), DEFALUT_DIVIDER_LINE_TO_CURR_VALUE - mCurrValueFontMetrics.top, mCurrValuePaint);
 
         //画显示当前进度的竖直线
-        canvas.drawLine(getScreenWidth() / 2, startLineLocationY, getScreenWidth() / 2, startLineLocationY + DEFALUT_LONG_LINE_HEIGHT, mCurrValuePaint);
+        canvas.drawLine(getScreenWidth() / 2 + mScroller.getFinalX(), startLineLocationY, getScreenWidth() / 2 + mScroller.getFinalX(), startLineLocationY + DEFALUT_LONG_LINE_HEIGHT, mCurrValuePaint);
     }
 
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         int x = (int) event.getX();
-        int y = (int) event.getY();
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                // 记录触摸点坐标
-                mLastX = x;
-                mLastY = y;
-                break;
-            case MotionEvent.ACTION_MOVE:
-                if (!mScroller.isFinished())
+                if (mScroller != null && !mScroller.isFinished()) {
                     mScroller.abortAnimation();
-
-                // 计算偏移量
-                //x坐标的移动距离
-                int offsetX = x - mLastX;
-
-                if (getScrollX() < 0)
-                    offsetX = 0;
-
-                if (getScrollX() > getMeasuredWidth() - getScreenWidth())
-                    offsetX = 0;
-
-//                scrollBy(offsetX, 0);
-                mScroller.startScroll(getScrollX(), getScrollY(), offsetX, 0);
-//                layout(getLeft() + offsetX,
-//                        getTop(),
-//                        getRight() + offsetX,
-//                        getBottom());
-                break;
+                }
+                mLastX = x;
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                int dataX = mLastX - x;
+//                if (mCountScale - mTempScale < 0) { //向右边滑动
+//                    if (mCountScale <= mStartValue && dataX <= 0) //禁止继续向右滑动
+//                        return super.onTouchEvent(event);
+//                } else if (mCountScale - mTempScale > 0) { //向左边滑动
+//                    if (mCountScale >= mMax && dataX >= 0) //禁止继续向左滑动
+//                        return super.onTouchEvent(event);
+//                }
+                smoothScrollBy(dataX, 0);
+                mLastX = x;
+                postInvalidate();
+//                mTempScale = mCountScale;
+                return true;
+            case MotionEvent.ACTION_UP:
+//                if (mCountScale < mMin) mCountScale = mMin;
+//                if (mCountScale > mMax) mCountScale = mMax;
+//                int finalX = (mCountScale - mMidCountScale) * mScaleMargin;
+                int finalX = getScreenWidth() / 2 + getScrollX();
+                mScroller.setFinalX(finalX); //纠正指针位置
+                postInvalidate();
+                return true;
         }
-        return true;
+        return super.onTouchEvent(event);
     }
 
     //保留几位小数的算法(这里保留两位小数)
@@ -249,10 +261,21 @@ public class SlideMeasureView extends View {
     @Override
     public void computeScroll() {
         super.computeScroll();
+        // 判断Scroller是否执行完毕
         if (mScroller.computeScrollOffset()) {
-            ((View) getParent()).scrollTo(mScroller.getCurrX(), mScroller.getCurrY());
+            scrollTo(mScroller.getCurrX(), mScroller.getCurrY());
+            // 通过重绘来不断调用computeScroll
             invalidate();
         }
     }
 
+    public void smoothScrollBy(int dx, int dy) {
+        mScroller.startScroll(mScroller.getFinalX(), mScroller.getFinalY(), dx, dy);
+    }
+
+    public void smoothScrollTo(int fx, int fy) {
+        int dx = fx - mScroller.getFinalX();
+        int dy = fy - mScroller.getFinalY();
+        smoothScrollBy(dx, dy);
+    }
 }
